@@ -177,7 +177,7 @@ function get_xml() {
 	if ($vs) $x .= $vs;
 	if ($ks) $x .= $ks;
 	$x .= "</Aktueller_Spielplan>\n";
-	$x = utf8_encode($x);
+	$x = mb_convert_encoding($x, 'UTF-8', 'ISO-8859-1');
 	return $x;
 }
 
@@ -359,12 +359,12 @@ function get_xml() {
 		$x .= "</Spielplan>\n";
 	}
 	$x .= "</Spielplan>\n";
-	$x = utf8_encode($x);
+	$x = mb_convert_encoding($x, 'UTF-8', 'ISO-8859-1');
 	return $x;
 }
 }
 
-// Liga Plan oder Pokal Plan oder Entscheidungsspiele (nur Tabelle und Spiele auf einer Seite)
+// Liga Plan oder Pokal Plan oder Entscheidungsspiele(nur Tabelle und Spiele auf einer Seite)
 class NuPlan2 {
 function set_aktuell($a) {
 	$this->aktuell = true;
@@ -648,7 +648,7 @@ function get_xml() {
 		$x .= "</Spielplan>\n";
 	}
 	$x .= "</Spielplan>\n";
-	$x = utf8_encode($x);
+	$x = mb_convert_encoding($x, 'UTF-8', 'ISO-8859-1');
 	return $x;
 }
 
