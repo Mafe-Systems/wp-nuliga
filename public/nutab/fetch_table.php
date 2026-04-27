@@ -32,25 +32,21 @@ error_reporting(E_ALL & ~(E_NOTICE|E_WARNING|E_DEPRECATED));
 define("DISABLE_CACHE", 0); 
 define("DEBUG_GET", 0); 
 
-// alle Parameter als global einlesen
-// auch dies kann man mal besser machen, wenn man will
-if (1 and !ini_get('register_globals')) {
-	$superglobals = array(
-		$_SERVER, 
-		$_COOKIE, 
-		//$_ENV,
-		//$_FILES, 
-		$_POST, 
-		$_GET);
-	if (0 and isset($_SESSION)) {
-		array_unshift($superglobals, $_SESSION);
-	}
-	foreach ($superglobals as $superglobal) {
-		extract($superglobal, EXTR_SKIP);
-	}
-	unset($superglobal);
-	unset($superglobals);
-}
+// Parameter explizit aus $_GET auslesen (sicherer als extract() auf Superglobals)
+$url             = isset($_GET['url'])             ? $_GET['url']             : "";
+$verband         = isset($_GET['verband'])         ? $_GET['verband']         : "";
+$sportart        = isset($_GET['sportart'])        ? $_GET['sportart']        : "";
+$spielplanverein = isset($_GET['spielplanverein']) ? (int) $_GET['spielplanverein'] : 0;
+$club            = isset($_GET['club'])            ? $_GET['club']            : "";
+$alle            = isset($_GET['alle'])            ? $_GET['alle']            : "";
+$von             = isset($_GET['von'])             ? $_GET['von']             : "";
+$bis             = isset($_GET['bis'])             ? $_GET['bis']             : "";
+$spielplan       = isset($_GET['spielplan'])       ? (int) $_GET['spielplan'] : 0;
+$aktuell         = isset($_GET['aktuell'])         ? (int) $_GET['aktuell']   : 0;
+$jn              = isset($_GET['jn'])              ? $_GET['jn']              : "";
+$cty             = isset($_GET['cty'])             ? $_GET['cty']             : "";
+$jh              = isset($_GET['jh'])              ? $_GET['jh']              : "";
+
 @ini_set("default_charset","ISO8859-1");
 @ini_set("date.timezone", "Europe/Berlin");
 // damit preg_match_all auch für lange strings geht
@@ -58,14 +54,13 @@ if (1 and !ini_get('register_globals')) {
 
 ob_start(); // damit warnings nicht in das XML kommen
 
-$q = $_SERVER['QUERY_STRING'];
+$q = isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : "";
 $q = preg_replace("/callback=.*?&/", "", $q);
 $q = preg_replace("/_=.*?(&|$)/", "", $q);
 //$ref = $_SERVER['HTTP_REFERER'];
 $callback = preg_replace('/[^a-zA-Z0-9$_.]/', "", array_key_exists("callback", $_GET) ? $_GET["callback"] : "");
 $u = "";
 $r = "";
-$auchak = (int) $auchak;
 $auchak = 0;
 
 // debug ausgabe
@@ -141,69 +136,39 @@ function put_cache($u, $r) {
 }
 
 
-// hält die Verbindung mit nuliga, kann Seiten abrufen, und POSTs absenden
-// umgestellt auf requests for php nehmen https://requests.ryanmccue.info/
-require_once("Requests-1.7.0/library/Requests.php");
-Requests::register_autoloader();
+// hält die Verbindung mit nuliga, kann Seiten abrufen
 class NuLiga {
-	var $cookies;
-	function init($state) {
-		if ($state) $this->cookies = unserialize(base64_decode($state));
-		else $this->cookies = Array();
-	}
-	function get_state() {
-		return base64_encode(serialize($this->cookies));
-	}
-	function login($bezirk) {
-		// braucht man gar nicht
-		die("todo");
-	}
 	function get($url, $referer = "") {
-		$DEB = DEBUG_GET;
 		// url muss absolut sein
 		if (!$url) throw new Exception("mit leerer URL aufgerufen");
 		if (!preg_match(';^http;i', $url)) throw new Exception("url nicht absolut: $url");
-		if (!$this->cookies) $this->cookies = array();
-		$o = array(
-			//"transport" => "Requests_Transport_cURL",
-			//"cookies" => $this->cookies,
-			//"proxy" => "localhost:8888",
-			"verify" => false, // true wäre besser, aber uns ist es egal mit welchem Server wir reden
-			"timeout" => 2*60,
-			"follow_redirects" => "false", 
-			"useragent" => "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; Trident/4.0)"
-			);
-		if (0) $o = array_merge($o, 
-			array("proxy" => "localhost:8888", "verify" => false));
-		$h = array(
-			"Referer" => $referer ? $referer : $url,
-			"Connection" => "close", 
-			"Accept-Language" => "de",
-		);
-		if ($DEB) {
-			$t1 = microtime(true); $t1s = date("H:i:s", (int)$t1); $t1m = $t1*1000%1000;
-			$handle = fopen("helper.log", 'a'); fwrite($handle, "$t1s.$t1m Get $url\r\n"); fclose($handle);
-		}
-		$r = Requests::get($url, $h, $o);
-		$this->cookies = $r->cookies;
-		$this->ref = $url;
-		$ret = rutf($r->body);
-		if ($DEB) {
-			$t1 = microtime(true); $t1s = date("H:i:s", (int)$t1); $t1m = $t1*1000%1000;
-			$handle = fopen("helper.log", 'a'); fwrite($handle, "$t1s.$t1m Got $url\r\n"); fclose($handle);
-			$handle = fopen("helper.log", 'a'); fwrite($handle, "$ret\r\n"); fclose($handle);
-		}
-		return $ret;
+		$ch = curl_init();
+		curl_setopt_array($ch, array(
+			CURLOPT_URL            => $url,
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_SSL_VERIFYPEER => false,
+			CURLOPT_TIMEOUT        => 120,
+			CURLOPT_FOLLOWLOCATION => false,
+			CURLOPT_USERAGENT      => "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; Trident/4.0)",
+			CURLOPT_REFERER        => $referer ? $referer : $url,
+			CURLOPT_HTTPHEADER     => array(
+				"Connection: close",
+				"Accept-Language: de",
+			),
+		));
+		$body = curl_exec($ch);
+		curl_close($ch);
+		return rutf($body ? $body : "");
 	}
 }
 
 // replace utf encoding to regular "ascii"
 function rutf($s) {
-	$s = utf8_decode($s);
+	$s = mb_convert_encoding($s, 'ISO-8859-1', 'UTF-8');
 	$s = str_replace('&nbsp;', ' ', $s);
 	$s = html_entity_decode($s);
-	$s = preg_replace_callback('~&#x([0-9a-f]+);~i', function($m) {$x = $m[0]; return "chr(hexdec($x))";}, $s);
-	$s = preg_replace_callback('~&#([0-9]+);~', function($m) {$x = $m[0]; return "chr($x)";}, $s);
+	$s = preg_replace_callback('~&#x([0-9a-f]+);~i', function($m) { return chr(hexdec($m[1])); }, $s);
+	$s = preg_replace_callback('~&#([0-9]+);~', function($m) { return chr((int) $m[1]); }, $s);
 	return $s;
 }
 
@@ -374,7 +339,7 @@ if ($cty) header("Content-Type: $cty");
 else if ($jh) header("Content-Type: application/json; charset=utf-8");
 else header("Content-Type: application/javascript; charset=utf-8");
 // CORS
-if ($_SERVER['HTTP_ORIGIN']) header("Access-Control-Allow-Origin: *");
+if (isset($_SERVER['HTTP_ORIGIN'])) header("Access-Control-Allow-Origin: *");
 
 if ($callback) echo "$callback($r)";
 else echo "$r";
