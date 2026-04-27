@@ -33,19 +33,19 @@ define("DISABLE_CACHE", 0);
 define("DEBUG_GET", 0); 
 
 // Parameter explizit aus $_GET auslesen (sicherer als extract() auf Superglobals)
-$url             = isset($_GET['url'])             ? $_GET['url']             : "";
-$verband         = isset($_GET['verband'])         ? $_GET['verband']         : "";
-$sportart        = isset($_GET['sportart'])        ? $_GET['sportart']        : "";
+$url             = isset($_GET['url'])             ? filter_var(trim($_GET['url']), FILTER_SANITIZE_URL) : "";
+$verband         = isset($_GET['verband'])         ? preg_replace('/[^a-zA-Z0-9\-]/', '', $_GET['verband']) : "";
+$sportart        = isset($_GET['sportart'])        ? preg_replace('/[^a-zA-Z0-9]/', '', $_GET['sportart']) : "";
 $spielplanverein = isset($_GET['spielplanverein']) ? (int) $_GET['spielplanverein'] : 0;
-$club            = isset($_GET['club'])            ? $_GET['club']            : "";
-$alle            = isset($_GET['alle'])            ? $_GET['alle']            : "";
-$von             = isset($_GET['von'])             ? $_GET['von']             : "";
-$bis             = isset($_GET['bis'])             ? $_GET['bis']             : "";
+$club            = isset($_GET['club'])            ? preg_replace('/[^0-9,\/]/', '', $_GET['club']) : "";
+$alle            = isset($_GET['alle'])            ? (int) $_GET['alle'] : 0;
+$von             = isset($_GET['von'])             ? preg_replace('/[^0-9\.]/', '', $_GET['von']) : "";
+$bis             = isset($_GET['bis'])             ? preg_replace('/[^0-9\.]/', '', $_GET['bis']) : "";
 $spielplan       = isset($_GET['spielplan'])       ? (int) $_GET['spielplan'] : 0;
 $aktuell         = isset($_GET['aktuell'])         ? (int) $_GET['aktuell']   : 0;
-$jn              = isset($_GET['jn'])              ? $_GET['jn']              : "";
-$cty             = isset($_GET['cty'])             ? $_GET['cty']             : "";
-$jh              = isset($_GET['jh'])              ? $_GET['jh']              : "";
+$jn              = isset($_GET['jn'])              ? (int) $_GET['jn']        : 0;
+$cty             = isset($_GET['cty'])             ? preg_replace('/[^a-zA-Z0-9\/\-\+\. ]/', '', $_GET['cty']) : "";
+$jh              = isset($_GET['jh'])              ? (int) $_GET['jh']        : 0;
 
 @ini_set("default_charset","ISO8859-1");
 @ini_set("date.timezone", "Europe/Berlin");
@@ -146,6 +146,9 @@ class NuLiga {
 		curl_setopt_array($ch, array(
 			CURLOPT_URL            => $url,
 			CURLOPT_RETURNTRANSFER => true,
+			// SSL peer verification is intentionally disabled: nuLiga server
+			// certificates vary by regional association and may not be in the
+			// default CA bundle. The data fetched is public league information.
 			CURLOPT_SSL_VERIFYPEER => false,
 			CURLOPT_TIMEOUT        => 120,
 			CURLOPT_FOLLOWLOCATION => false,
@@ -167,8 +170,8 @@ function rutf($s) {
 	$s = mb_convert_encoding($s, 'ISO-8859-1', 'UTF-8');
 	$s = str_replace('&nbsp;', ' ', $s);
 	$s = html_entity_decode($s);
-	$s = preg_replace_callback('~&#x([0-9a-f]+);~i', function($m) { return chr(hexdec($m[1])); }, $s);
-	$s = preg_replace_callback('~&#([0-9]+);~', function($m) { return chr((int) $m[1]); }, $s);
+	$s = preg_replace_callback('~&#x([0-9a-f]+);~i', function($m) { return mb_chr(hexdec($m[1]), 'ISO-8859-1'); }, $s);
+	$s = preg_replace_callback('~&#([0-9]+);~', function($m) { return mb_chr((int) $m[1], 'ISO-8859-1'); }, $s);
 	return $s;
 }
 
