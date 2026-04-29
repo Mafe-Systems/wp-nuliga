@@ -1,4 +1,4 @@
-=== Plugin Name ===
+# Plugin Name
 Contributors: (this should be a list of wordpress.org userid's)
 Donate link: https://github.com/mjasny/
 Tags: comments, spam
@@ -10,7 +10,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 Plugin for nuLiga.
 
-== Description ==
+## Description
 
 This is a wordpress plugin for easy usage of [nuTab](https://harald-herberth.github.io/nuTab/).
 Fetched data is cached for 10 minutes to reduce load on nuLiga servers.
@@ -21,7 +21,7 @@ Shortcodes available after activation:
 * `[nuliga_plan url="..." verein="Club Name" alle="1"]` – class schedule
 * `[nuliga_planverein club="12345" verein="Club Name"]` – full club schedule
 
-== Installation ==
+## Installation
 
 This section describes how to install the plugin and get it working.
 
